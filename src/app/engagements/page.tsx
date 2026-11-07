@@ -1,0 +1,157 @@
+/* eslint-disable react/no-unescaped-entities */
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { Reveal } from "@/components/ui/Reveal";
+
+export const metadata: Metadata = {
+  title: "Engagements & Fondation — Touré Ahmed Bouah",
+  description: "Engagements de Touré Ahmed Bouah à travers la Fondation Solidarité & Développement.",
+};
+
+const areas = [
+  { num: "01", title: "Aménagement & Urbanisme Durable", desc: "Promouvoir une réflexion structurée sur l'organisation des territoires et la création de cadres de vie aérés, pérennes et respectueux de l'environnement." },
+  { num: "02", title: "Paix Foncière & Justice Coutumière", desc: "Mettre la concertation et l'équité au cœur des relations avec les chefs et propriétaires terriens villageois afin d'assurer une cohabitation pacifiée." },
+  { num: "03", title: "Éducation & Formation Technique", desc: "Soutenir la formation des jeunes aux métiers du bâtiment, des travaux publics, de la topographie et de l'ingénierie de la ville." },
+  { num: "04", title: "Santé & Infrastructures Villageoises", desc: "Financer la réhabilitation d'écoles, de dispensaires de santé et d'adductions d'eau potable dans les villages riverains des zones d'aménagement." },
+];
+
+export default function EngagementsPage() {
+  return (
+    <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
+      {/* Hero — Navy */}
+      <section
+        style={{
+          background: "var(--navy)",
+          color: "#fff",
+          padding: "clamp(80px, 10vw, 120px) 0",
+        }}
+      >
+        <div
+          className="container-x"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.1fr 0.9fr",
+            gap: "clamp(40px, 6vw, 80px)",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <Reveal>
+              <p className="eyebrow">Fondation Solidarité &amp; Développement</p>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <h1 style={{ color: "#fff", lineHeight: 0.9, marginBottom: 32 }}>
+                Construire un Avenir<br />Plus <em>Solidaire.</em>
+              </h1>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <p style={{ color: "rgba(203,211,216,0.85)", maxWidth: 520, fontSize: "17px", lineHeight: 1.75, marginBottom: 36 }}>
+                À travers la <strong style={{ color: "#fff" }}>Fondation Solidarité &amp; Développement</strong>, Touré Ahmed Bouah soutient l&apos;idée que le développement territorial n&apos;a de sens que s&apos;il élève les conditions de vie de chacun et consolide le pacte social.
+              </p>
+            </Reveal>
+            <Reveal delay={0.3}>
+              <Link href="/rendez-vous" className="btn-primary">
+                Proposer un partenariat ↗
+              </Link>
+            </Reveal>
+          </div>
+
+          <Reveal delay={0.2}>
+            <div style={{ position: "relative", maxWidth: 440, marginLeft: "auto" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: "-16px 16px 16px -16px",
+                  border: "1px solid var(--gold)",
+                  pointerEvents: "none",
+                }}
+              />
+              <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden" }}>
+                <Image
+                  src="https://www.fratmat.info/uploads/images/2025/08/05/248649.jpeg"
+                  alt="Touré Ahmed Bouah lors d'une rencontre communautaire"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 44vw"
+                  style={{ objectFit: "cover", filter: "saturate(0.65) contrast(1.04)" }}
+                />
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Quote */}
+      <section style={{ background: "var(--cream)", padding: "clamp(60px, 8vw, 100px) 0" }}>
+        <div className="container-x" style={{ maxWidth: 800 }}>
+          <Reveal>
+            <blockquote
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: "clamp(22px, 3vw, 36px)",
+                color: "var(--ink)",
+                fontWeight: 400,
+                fontStyle: "italic",
+                lineHeight: 1.4,
+                letterSpacing: "-0.03em",
+                margin: 0,
+              }}
+            >
+              « Pour une Afrique qui planifie, qui construit et qui transforme{" "}
+              <span style={{ color: "var(--gold)" }}>avec équité.</span> »
+            </blockquote>
+            <p style={{ marginTop: 20, fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", color: "var(--gold)" }}>
+              Touré Ahmed Bouah
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* 4 Areas */}
+      <section style={{ background: "var(--paper)", padding: "clamp(80px, 10vw, 120px) 0" }}>
+        <div className="container-x">
+          <Reveal>
+            <p className="eyebrow-dark">Axes d&apos;Intervention</p>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <h2 style={{ marginBottom: 56 }}>
+              Les Domaines d&apos;Action<br />de la <em>Fondation</em>
+            </h2>
+          </Reveal>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", borderTop: "1px solid var(--border)", gap: 0 }}>
+            {areas.map((a, idx) => (
+              <Reveal key={a.num} delay={idx * 0.08}>
+                <div
+                  style={{
+                    padding: "36px",
+                    borderBottom: idx < 2 ? "1px solid var(--border)" : "none",
+                    borderRight: idx % 2 === 0 ? "1px solid var(--border)" : "none",
+                  }}
+                >
+                  <span style={{ color: "var(--gold)", font: "italic 15px Georgia, serif", display: "block", marginBottom: 32 }}>{a.num}</span>
+                  <h3 style={{ marginBottom: 14, fontSize: "clamp(18px, 2vw, 24px)" }}>{a.title}</h3>
+                  <p style={{ fontSize: "14px", lineHeight: 1.75 }}>{a.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ background: "var(--navy)", padding: "clamp(60px, 8vw, 100px) 0" }}>
+        <div className="container-x" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 32 }}>
+          <Reveal>
+            <h2 style={{ color: "#fff", maxWidth: 480 }}>
+              Rejoignez le mouvement.<br /><em>Construisons ensemble.</em>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <Link href="/rendez-vous" className="btn-primary">Prendre contact ↗</Link>
+          </Reveal>
+        </div>
+      </section>
+    </div>
+  );
+}
