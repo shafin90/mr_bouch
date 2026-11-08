@@ -5,40 +5,43 @@ import * as nodemailer from "nodemailer";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventId, fullName, email, phone, seats } = body;
+    const eventId = String(body.eventId || "");
+    const fullName = String(body.fullName || "").trim();
+    const email = String(body.email || "").trim();
+    const phone = String(body.phone || "").trim();
+    const location = String(body.location || "").trim();
+    const seats = Number(body.seats || 1);
 
-    if (!email || !fullName) {
-      return NextResponse.json({ error: "Nom et email obligatoires" }, { status: 400 });
+    if (!eventId || !email || !fullName || !location || !Number.isInteger(seats)) {
+      return NextResponse.json({ error: "Nom, email, lieu et nombre de places sont obligatoires." }, { status: 400 });
     }
 
     const supabase = await createClient();
 
-    // 1. Fetch event info
-    let eventTitle = "Événement officiel";
-    let eventDate = "";
-    let eventLocation = "";
-    if (eventId) {
-      const { data: ev } = await supabase.from("events").select("*").eq("id", eventId).single();
-      if (ev) {
-        eventTitle = ev.title;
-        eventDate = ev.date ? `${ev.date}${ev.time ? ` à ${ev.time}` : ""}` : "";
-        eventLocation = ev.location || "Abidjan, Côte d'Ivoire";
-      }
+    const { data: ev, error: eventError } = await supabase.from("events").select("*").eq("id", eventId).single();
+    if (eventError || !ev) return NextResponse.json({ error: "Événement introuvable." }, { status: 404 });
+    const eventTitle = String(ev.title || "Événement officiel");
+    const eventDate = ev.date ? `${ev.date}${ev.time ? ` à ${ev.time}` : ""}` : "";
+    const eventLocation = String(ev.location || "");
+
+    const { data: reservation, error: reservationError } = await supabase.rpc("register_for_event", {
+      p_event_id: eventId,
+      p_full_name: fullName,
+      p_email: email,
+      p_phone: phone,
+      p_location: location,
+      p_seats: seats,
+    });
+    if (reservationError) throw reservationError;
+    if (!reservation?.success) {
+      return NextResponse.json({ error: reservation?.error || "Impossible de réserver ces places." }, { status: 409 });
     }
 
-    const confirmationCode = `EVT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-    // 2. Persist booking info into meeting_requests as a fallback/unified record
-    try {
-      await supabase.from("meeting_requests").insert({
-        name: fullName,
-        email: email,
-        organization: `Inscription Événement: ${eventTitle} (${seats || 1} place(s))`,
-        message: `[Code Réservation: ${confirmationCode}] Téléphone: ${phone || "Non renseigné"} - Places: ${seats || 1} - Événement ID: ${eventId || "N/A"}`,
-      });
-    } catch (dbErr) {
-      console.warn("DB insert fallback warning:", dbErr);
-    }
+    const confirmationCode = reservation.confirmation_code;
+    const assignedSeats: number[] = reservation.seat_numbers || [];
+    const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[char]!));
 
     // 3. Send confirmation email via Nodemailer
     let sent = false;
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
       <h1 class="title">Réservation Enregistrée</h1>
     </div>
     <div class="content">
-      <p>Bonjour <strong>${fullName}</strong>,</p>
+      <p>Bonjour <strong>${escapeHtml(fullName)}</strong>,</p>
       <p>Votre place pour l'événement ci-dessous a été réservée avec succès auprès du cabinet de M. Touré Ahmed Bouah :</p>
       
       <div class="code-box">
@@ -111,21 +114,29 @@ export async function POST(req: NextRequest) {
       <div class="meta-box">
         <div class="meta-row">
           <span class="meta-label">Événement :</span>
-          <span class="meta-value">${eventTitle}</span>
+          <span class="meta-value">${escapeHtml(eventTitle)}</span>
         </div>
         ${eventDate ? `
         <div class="meta-row">
           <span class="meta-label">Date :</span>
-          <span class="meta-value">${eventDate}</span>
+          <span class="meta-value">${escapeHtml(eventDate)}</span>
         </div>` : ""}
         ${eventLocation ? `
         <div class="meta-row">
           <span class="meta-label">Lieu :</span>
-          <span class="meta-value">${eventLocation}</span>
+          <span class="meta-value">${escapeHtml(eventLocation)}</span>
         </div>` : ""}
         <div class="meta-row">
           <span class="meta-label">Nombre de place(s) :</span>
-          <span class="meta-value">${seats || 1}</span>
+          <span class="meta-value">${seats}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Places attribuées :</span>
+          <span class="meta-value">${assignedSeats.join(", ")}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Ville / pays :</span>
+          <span class="meta-value">${escapeHtml(location)}</span>
         </div>
       </div>
 
@@ -141,7 +152,7 @@ export async function POST(req: NextRequest) {
       `;
 
       const info = await transporter.sendMail({
-        from: '"Cabinet de Touré Ahmed Bouah" <evenements@sophiasa.net>',
+        from: process.env.SMTP_FROM || '"Cabinet de Touré Ahmed Bouah" <evenements@sophiasa.net>',
         to: email,
         subject: `Confirmation de réservation : ${eventTitle} (${confirmationCode})`,
         html: emailHtml,
@@ -157,6 +168,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       confirmationCode,
+      seatNumbers: assignedSeats,
       emailSent: sent,
       previewUrl,
     });

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, Calendar, Users, FileText, CheckCircle, Clock } from "lucide-react";
+import { Eye, Calendar, Users, FileText, Plus, ArrowUpRight, Clock3 } from "lucide-react";
 
 export default function AdminPage() {
   const [user, setUser] = useState<any>(null);
@@ -63,18 +63,18 @@ export default function AdminPage() {
   if (!user) return null;
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="mx-auto max-w-[1500px] space-y-8 pb-12">
       {/* Header */}
       <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-bronze">
-            Portail Gouvernance &amp; Pilotage
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-bronze">
+            ESPACE DE TRAVAIL / VUE D&apos;ENSEMBLE
           </p>
           <h1 className="mt-1 font-display text-3xl font-light text-navy md:text-4xl">
-            Tableau de Bord
+            Bonjour, bienvenue dans votre espace
           </h1>
           <p className="mt-1.5 text-xs text-slate">
-            Session active : <span className="font-mono font-medium text-navy">{user.email}</span>
+            Connecté en tant que <span className="font-medium text-navy">{user.email}</span>
           </p>
         </div>
         <div className="flex gap-3">
@@ -83,7 +83,7 @@ export default function AdminPage() {
             target="_blank"
             className="rounded border border-border bg-white px-3.5 py-2 text-xs font-medium text-navy hover:bg-slate-50"
           >
-            Voir le site public ↗
+            <ArrowUpRight className="mr-1 inline h-3.5 w-3.5" /> Voir le site
           </Link>
           <button
             onClick={async () => {
@@ -98,10 +98,30 @@ export default function AdminPage() {
         </div>
       </div>
 
+      <section className="rounded-xl border border-border bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="font-display text-xl text-navy">Actions rapides</h2>
+            <p className="mt-1 text-sm text-slate">Créez du contenu ou gérez vos prochaines rencontres.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/events/new" className="inline-flex items-center gap-2 rounded-md bg-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-navy-deep">
+              <Plus className="h-4 w-4" /> Créer un événement
+            </Link>
+            <Link href="/admin/news/new" className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-semibold text-navy transition hover:bg-slate-50">
+              <Plus className="h-4 w-4" /> Rédiger une actualité
+            </Link>
+            <Link href="/admin/meetings" className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-semibold text-navy transition hover:bg-slate-50">
+              <Clock3 className="h-4 w-4" /> Demandes reçues
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* KPI Cards Strip */}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {/* Actualités */}
-        <div className="rounded-xl border border-border bg-white p-5 shadow-2xs">
+        <div className="rounded-xl border border-border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate">Actualités &amp; Blog</span>
             <FileText className="h-5 w-5 text-bronze" />
@@ -114,18 +134,18 @@ export default function AdminPage() {
         </div>
 
         {/* Lectures Totales */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-5 shadow-2xs">
+        <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-blue-900">Lectures Totales</span>
             <Eye className="h-5 w-5 text-blue-600" />
           </div>
           <p className="mt-3 font-display text-3xl font-light text-navy">{counts.totalViews.toLocaleString()}</p>
           <p className="mt-1 text-xs text-slate">Vues cumulées sur les articles</p>
-          <span className="mt-3 inline-block text-[11px] text-blue-700 font-medium">Statistiques en temps réel</span>
+          <span className="mt-3 inline-block text-[11px] text-blue-700 font-medium">Total cumulé</span>
         </div>
 
         {/* Événements */}
-        <div className="rounded-xl border border-border bg-white p-5 shadow-2xs">
+        <div className="rounded-xl border border-border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate">Événements</span>
             <Calendar className="h-5 w-5 text-bronze" />
@@ -138,7 +158,7 @@ export default function AdminPage() {
         </div>
 
         {/* Demandes & Rendez-vous */}
-        <div className="rounded-xl border border-border bg-white p-5 shadow-2xs">
+        <div className="rounded-xl border border-border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate">Rendez-vous</span>
             <Users className="h-5 w-5 text-bronze" />

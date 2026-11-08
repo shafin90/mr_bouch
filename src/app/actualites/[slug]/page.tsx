@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, Clock } from "lucide-react";
 import { ViewTracker } from "@/components/news/ViewTracker";
 import "@/components/editor/editor.css";
+import { getPublishedPageContent } from "@/lib/site-content";
 
 export async function generateMetadata({
   params,
@@ -11,6 +12,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const content = await getPublishedPageContent("news");
   const supabase = await createClient();
   const { data: article } = await supabase
     .from("news")
@@ -36,6 +38,7 @@ export default async function NewsDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const content = await getPublishedPageContent("news");
   const supabase = await createClient();
   const { data: article } = await supabase
     .from("news")
@@ -53,7 +56,7 @@ export default async function NewsDetailPage({
             href="/actualites"
             className="btn-primary"
           >
-            ← Retour aux actualités
+            ← {content.back}
           </Link>
         </div>
       </section>
@@ -73,7 +76,7 @@ export default async function NewsDetailPage({
           className="text-link"
           style={{ fontSize: "11px", marginBottom: 36, display: "inline-flex", alignItems: "center", gap: 6 }}
         >
-          <ArrowLeft className="h-3 w-3" /> Toutes les actualités
+          <ArrowLeft className="h-3 w-3" /> {content.back}
         </Link>
 
         {/* Header section */}
@@ -87,14 +90,13 @@ export default async function NewsDetailPage({
             <span>•</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <Calendar className="h-3 w-3 text-[var(--gold)]" />
-              {article.date || (article.created_at ? new Date(article.created_at).toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" }) : "")}
+              {article.date || (article.created_at ? new Date(article.created_at).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" }) : "")}
             </span>
             <span>•</span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <Clock className="h-3 w-3 text-[var(--gold)]" />
               ~{readingTime} min de lecture
             </span>
-            <span>•</span>
             <ViewTracker slug={slug} />
           </div>
 
@@ -139,7 +141,7 @@ export default async function NewsDetailPage({
             href="/rendez-vous"
             className="btn-primary"
           >
-            Prendre contact ↗
+            {content.contactCta} ↗
           </Link>
         </div>
       </div>

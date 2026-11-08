@@ -1,15 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 
-const focusAreas = [
-  "Éco-Urbanisme & Villes Durables",
-  "Paix Foncière & Justice Coutumière",
-  "Formation aux Métiers de la Ville",
-  "Éducation & Santé Communautaire",
-];
-
-export function EngagementsSection() {
+export async function EngagementsSection() {
+  const content = await getPublishedPageContent("home");
+  const focusAreas = [content.focus1, content.focus2, content.focus3, content.focus4];
   return (
     <section style={{ background: "var(--paper)", padding: "clamp(70px, 9vw, 110px) 0" }}>
       <div className="container-x">
@@ -34,12 +29,10 @@ export function EngagementsSection() {
                 }}
               />
               <div style={{ position: "relative", aspectRatio: "4/5", overflow: "hidden", background: "#10283a" }}>
-                <Image
-                  src="https://www.fratmat.info/uploads/images/2025/08/05/248649.jpeg"
+                <img
+                  src={content.engagementsImage}
                   alt="Fondation Solidarité & Développement"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 40vw"
-                  style={{ objectFit: "cover", filter: "saturate(0.7) contrast(1.04)" }}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "saturate(0.7) contrast(1.04)" }}
                 />
               </div>
             </div>
@@ -49,20 +42,19 @@ export function EngagementsSection() {
           <div>
             <Reveal>
               <p className="eyebrow-dark">
-                <span className="section-marker">03</span> Engagements &amp; RSE
+                <span className="section-marker">03</span> {content.engagementsEyebrow.replace(/^03\s*/, "")}
               </p>
             </Reveal>
 
             <Reveal delay={0.1}>
               <h2 style={{ marginBottom: 20 }}>
-                Bâtir un Modèle Équitable,<br />
-                Respectueux des <em>Communautés.</em>
+                {content.engagementsTitle}
               </h2>
             </Reveal>
 
             <Reveal delay={0.2}>
               <p style={{ fontSize: "15px", lineHeight: 1.8, marginBottom: 24, color: "var(--muted)" }}>
-                Pour Touré Ahmed Bouah, la viabilité d&apos;un grand projet foncier repose sur la concorde et le dialogue continu avec les populations locales. À travers la <strong style={{ color: "var(--ink)" }}>Fondation Solidarité &amp; Développement</strong>, il investit dans l&apos;éducation, l&apos;accès à l&apos;eau potable et la formation technique dans les villages riverains.
+                {content.engagementsBody}
               </p>
             </Reveal>
 
@@ -76,7 +68,7 @@ export function EngagementsSection() {
 
             <Reveal delay={0.4}>
               <Link href="/engagements" className="text-link">
-                Découvrir la fondation ↗
+                {content.engagementsCta} ↗
               </Link>
             </Reveal>
           </div>

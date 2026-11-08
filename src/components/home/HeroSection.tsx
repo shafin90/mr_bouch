@@ -1,8 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 
-export function HeroSection() {
+export async function HeroSection() {
+  const content = await getPublishedPageContent("home");
   return (
     <>
       {/* Hero — Deep Restful Navy Section */}
@@ -20,15 +21,12 @@ export function HeroSection() {
             <div style={{ maxWidth: 580 }}>
               <Reveal>
                 <p className="eyebrow">
-                  <span>✦</span> Touré Ahmed Bouah · Fondateur &amp; Bâtisseur
+                  <span>✦</span> {content.heroEyebrow}
                 </p>
               </Reveal>
 
               <Reveal delay={0.1}>
-                <h1 style={{ color: "#fff", marginBottom: 24 }}>
-                  Bâtir des villes.<br />
-                  Éveiller les <em>consciences.</em>
-                </h1>
+                <h1 style={{ color: "#fff", marginBottom: 24, whiteSpace: "pre-line" }}>{content.heroTitle}</h1>
               </Reveal>
 
               <Reveal delay={0.2}>
@@ -41,17 +39,17 @@ export function HeroSection() {
                     lineHeight: 1.8,
                   }}
                 >
-                  Promoteur de la Ville Nouvelle <strong style={{ color: "#fff" }}>Akwaba City (12 000 Ha)</strong> et Président-Directeur Général de <strong style={{ color: "#fff" }}>SOPHIA S.A.</strong>, Touré Ahmed Bouah consacre son action à une Afrique qui planifie, construit et transforme avec équité.
+                  {content.heroBody}
                 </p>
               </Reveal>
 
               <Reveal delay={0.3}>
                 <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 24 }}>
-                  <Link href="/biographie" className="btn-primary">
-                    Découvrir le parcours <span aria-hidden="true">↗</span>
+                  <Link href="/entrepreneuriat" className="btn-primary">
+                    {content.heroProjectsCta} <span aria-hidden="true">↗</span>
                   </Link>
-                  <Link href="/entrepreneuriat" className="text-link-light">
-                    Explorer les mégaprojets <span aria-hidden="true">↗</span>
+                  <Link href="/rendez-vous" className="text-link-light">
+                    {content.heroContactCta} <span aria-hidden="true">↗</span>
                   </Link>
                 </div>
               </Reveal>
@@ -89,13 +87,14 @@ export function HeroSection() {
                       boxShadow: "0 25px 60px rgba(0, 0, 0, 0.45)",
                     }}
                   >
-                    <Image
-                      src="https://www.echosmedias.net/uploads/2025-06/fi_2151.jpg"
+                    <img
+                      src={content.heroImage}
                       alt="Touré Ahmed Bouah"
-                      fill
-                      priority
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 45vw, 480px"
                       style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
                         objectFit: "cover",
                         objectPosition: "50% 16%",
                         filter: "saturate(0.85) contrast(1.05)",
@@ -125,7 +124,7 @@ export function HeroSection() {
                           fontWeight: 700,
                         }}
                       >
-                        Touré Ahmed Bouah
+                        {content.heroName || "Touré Ahmed Bouah"}
                       </span>
                       <span
                         style={{
@@ -136,7 +135,7 @@ export function HeroSection() {
                           fontWeight: 700,
                         }}
                       >
-                        SOPHIA S.A.
+                        {content.officeName}
                       </span>
                     </div>
                   </div>
@@ -155,8 +154,8 @@ export function HeroSection() {
                       paddingLeft: 4,
                     }}
                   >
-                    <span>Abidjan · Côte d&apos;Ivoire</span>
-                    <span style={{ color: "var(--gold)" }}>Présidence · Depuis 2004</span>
+                    <span>{content.heroLocation}</span>
+                    <span style={{ color: "var(--gold)" }}>{content.heroRole}</span>
                   </div>
                 </div>
               </Reveal>
@@ -164,25 +163,25 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Structured 4-Metric Proof Dashboard (Instant Investor Scanning) */}
+        {/* Project scope is presented as a lead, with verification details on the project page. */}
         <div className="proof-dashboard">
           <div className="container-x">
             <div className="proof-dashboard-grid">
               <div className="proof-metric-item">
-                <span className="proof-metric-number">12 000 Ha</span>
-                <span className="proof-metric-label">Aménagement Akwaba City</span>
+                <span className="proof-metric-number">Akwaba City</span>
+                <span className="proof-metric-label">{content.homeProjectMetric}</span>
               </div>
               <div className="proof-metric-item">
-                <span className="proof-metric-number">+50 Mds</span>
-                <span className="proof-metric-label">FCFA Engagés &amp; Structurés</span>
+                <span className="proof-metric-number">SOPHIA S.A.</span>
+                <span className="proof-metric-label">Aménagement &amp; co-développement</span>
               </div>
               <div className="proof-metric-item">
-                <span className="proof-metric-number">100% ACD</span>
-                <span className="proof-metric-label">Sécurité Foncière Garantie</span>
+                <span className="proof-metric-number">Côte d&apos;Ivoire</span>
+                <span className="proof-metric-label">Ancrage territorial</span>
               </div>
               <div className="proof-metric-item">
-                <span className="proof-metric-number">49 Livres</span>
-                <span className="proof-metric-label">Ouvrages &amp; Essais Publiés</span>
+                <span className="proof-metric-number">Partenariats</span>
+                <span className="proof-metric-label">Dialoguons sur les opportunités</span>
               </div>
             </div>
           </div>

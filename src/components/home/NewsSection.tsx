@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 import { createClient } from "@/lib/supabase/server";
 
 export async function NewsSection() {
+  const content = await getPublishedPageContent("home");
   let articles: any[] = [];
   try {
     const supabase = await createClient();
@@ -19,38 +21,6 @@ export async function NewsSection() {
     // fallback
   }
 
-  if (articles.length === 0) {
-    articles = [
-      {
-        id: "1",
-        title: "SOPHIA S.A. franchit une étape décisive pour le pôle d'affaires d'Akwaba City",
-        excerpt: "Analyse des retombées économiques et des accords institutionnels garantissant la viabilisation de 12 000 hectares dans le Grand Abidjan.",
-        category: "Investissements",
-        slug: "akwaba-city-etape-decisive",
-        image_url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
-        date: "15 Mars 2026",
-      },
-      {
-        id: "2",
-        title: "Tribune : Pourquoi la maîtrise des risques fonciers est le levier clé de l'Afrique",
-        excerpt: "Touré Ahmed Bouah détaille dans une tribune exclusive comment sécuriser les capitaux privés face aux défis de l'urbanisation rapide.",
-        category: "Tribune & Idées",
-        slug: "maitrise-des-risques-fonciers",
-        image_url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
-        date: "28 Février 2026",
-      },
-      {
-        id: "3",
-        title: "Développement territorial : Nouveau protocole d'accord avec les communautés villageoises",
-        excerpt: "Un modèle pionnier de cohésion sociale et de redistribution assurant une paix foncière pérenne pour les chantiers d'envergure.",
-        category: "Actualités",
-        slug: "protocole-accord-communautes",
-        image_url: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80",
-        date: "20 Janvier 2026",
-      },
-    ];
-  }
-
   return (
     <section style={{ background: "var(--paper)", padding: "clamp(70px, 9vw, 110px) 0" }}>
       <div className="container-x">
@@ -59,25 +29,25 @@ export async function NewsSection() {
           <div>
             <Reveal>
               <p className="eyebrow-dark">
-                <span className="section-marker">05</span> Actualités &amp; Tribunes
+                <span className="section-marker">05</span> {content.newsEyebrow.replace(/^05\s*/, "")}
               </p>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 style={{ maxWidth: 640 }}>
-                Regards sur l&apos;Économie<br />
-                et la <em>Ville.</em>
+              <h2 style={{ maxWidth: 640, whiteSpace: "pre-line" }}>
+                {content.newsTitle}
               </h2>
             </Reveal>
           </div>
           <Reveal delay={0.2}>
             <Link href="/actualites" className="text-link">
-              Toutes les actualités ↗
+              {content.newsCta} ↗
             </Link>
           </Reveal>
         </div>
 
         {/* 3 Articles Grid in Bola Ranson Minimal Bordered Style */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "24px" }}>
+          {articles.length === 0 && <p>{content.newsEmpty}</p>}
           {articles.map((item, idx) => (
             <Reveal key={item.id} delay={idx * 0.1}>
               <article
@@ -107,7 +77,7 @@ export async function NewsSection() {
                       {item.category || "Actualité"}
                     </span>
                     <span style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "ui-monospace, monospace" }}>
-                      {item.date || (item.created_at ? new Date(item.created_at).toLocaleDateString("fr-FR") : "")}
+                      {item.date || (item.created_at ? new Date(item.created_at).toLocaleDateString("en-GB") : "")}
                     </span>
                   </div>
 

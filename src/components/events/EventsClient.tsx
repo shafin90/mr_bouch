@@ -11,12 +11,11 @@ export type EventItem = {
   time: string | null;
   location: string | null;
   image_url: string | null;
-  registration_url: string | null;
   status: string;
   created_at?: string;
 };
 
-export function EventsClient({ events }: { events: EventItem[] }) {
+export function EventsClient({ events, content }: { events: EventItem[]; content: Record<string, string> }) {
   const [view, setView] = useState<"calendar" | "list">("list");
   const [filter, setFilter] = useState("all");
   const today = new Date();
@@ -61,7 +60,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
                 filter === f ? "bg-navy text-ivory" : "border border-border text-navy"
               }`}
             >
-              {f === "all" ? "Tous" : f === "upcoming" ? "À venir" : "Passés"}
+              {f === "all" ? content.filterAll : f === "upcoming" ? content.filterUpcoming : content.filterPast}
             </button>
           ))}
         </div>
@@ -72,7 +71,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
               view === "calendar" ? "bg-navy text-ivory" : "border border-border"
             }`}
           >
-            Calendrier
+            {content.calendarView}
           </button>
           <button
             onClick={() => setView("list")}
@@ -80,7 +79,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
               view === "list" ? "bg-navy text-ivory" : "border border-border"
             }`}
           >
-            Liste
+            {content.listView}
           </button>
         </div>
       </div>
@@ -89,7 +88,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filtered.length === 0 ? (
             <div className="col-span-full border border-border bg-white p-8 text-center text-sm text-slate">
-              Aucun événement programmé pour cette sélection.
+              {content.empty}
             </div>
           ) : (
             filtered.map((e) => (
@@ -116,18 +115,8 @@ export function EventsClient({ events }: { events: EventItem[] }) {
                     href={`/evenements/${e.id}`}
                     className="text-xs font-semibold uppercase tracking-wider text-navy underline hover:text-bronze"
                   >
-                    Détails &amp; Inscription →
+                    {content.detailsCta} →
                   </Link>
-                  {e.registration_url && (
-                    <a
-                      href={e.registration_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-auto text-xs text-bronze underline"
-                    >
-                      Lien direct
-                    </a>
-                  )}
                 </div>
               </div>
             ))
@@ -150,7 +139,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
               ←
             </button>
             <p className="font-display text-xl text-navy capitalize">
-              {new Date(year, month).toLocaleString("fr-FR", {
+              {new Date(year, month).toLocaleString("en-GB", {
                 month: "long",
                 year: "numeric",
               })}
@@ -168,7 +157,7 @@ export function EventsClient({ events }: { events: EventItem[] }) {
             </button>
           </div>
           <div className="mt-4 grid grid-cols-7 gap-1">
-            {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map((d) => (
+            {[content.weekdaySun, content.weekdayMon, content.weekdayTue, content.weekdayWed, content.weekdayThu, content.weekdayFri, content.weekdaySat].map((d) => (
               <div key={d} className="text-center text-xs font-semibold uppercase text-slate py-2">
                 {d}
               </div>

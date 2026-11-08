@@ -1,184 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { parseMeetingRequest, withMeetingStatus } from "@/lib/meeting-request";
 import * as nodemailer from "nodemailer";
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[char]!));
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { id, name, email, organization, preferred_date, preferred_time, meeting_type, status } = body;
-
-    if (!email) {
-      return NextResponse.json({ error: "Adresse email requise" }, { status: 400 });
-    }
-
-    // 1. Update status in database
     const supabase = await createClient();
-    try {
-      if (id) {
-        // Try updating status column or message
-        const { error } = await supabase
-          .from("meeting_requests")
-          .update({
-            message: `[Statut: ${status || "accepted"}] Confirmé par le cabinet le ${new Date().toLocaleDateString("fr-FR")}`,
-          })
-          .eq("id", id);
-      }
-    } catch (dbErr) {
-      console.warn("DB update warning (non-fatal):", dbErr);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+    const { id } = await req.json();
+    if (!id) return NextResponse.json({ error: "Request not found." }, { status: 400 });
+
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      return NextResponse.json({ error: "Email configuration is missing. Set SMTP_HOST, SMTP_USER and SMTP_PASS before approving." }, { status: 503 });
     }
 
-    // 2. Prepare HTML Email Content
-    const formatLabel = meeting_type === "in_person"
-      ? "En personne (Siège de SOPHIA S.A. — Cocody 2 Plateaux, Abidjan)"
-      : "Visioconférence sécurisée (Le lien vous sera communiqué 24h avant l'échange)";
+    const { data: meeting, error: lookupError } = await supabase
+      .from("meeting_requests").select("*").eq("id", id).single();
+    if (lookupError || !meeting) return NextResponse.json({ error: "Request not found." }, { status: 404 });
 
-    const formattedDate = preferred_date
-      ? new Date(preferred_date).toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
-      : "Date convenue avec le secrétariat";
-
-    const emailHtml = `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>Confirmation de rendez-vous — Touré Ahmed Bouah</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f6f0; margin: 0; padding: 40px 20px; color: #0f1c28;">
-  <table align="center" width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border: 1px solid #d6d0c4; border-top: 4px solid #b38938;">
-    <!-- Header -->
-    <tr>
-      <td style="padding: 32px 36px; background-color: #081928; text-align: left;">
-        <span style="color: #b38938; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;">Cabinet de la Présidence</span>
-        <h1 style="color: #ffffff; font-family: Georgia, serif; font-size: 24px; font-weight: normal; margin: 8px 0 0; letter-spacing: -0.02em;">Touré Ahmed Bouah</h1>
-        <p style="color: rgba(255,255,255,0.6); font-size: 11px; margin: 4px 0 0; text-transform: uppercase; letter-spacing: 0.12em;">SOPHIA S.A. · République de Côte d'Ivoire</p>
-      </td>
-    </tr>
-
-    <!-- Body -->
-    <tr>
-      <td style="padding: 36px 36px 28px;">
-        <p style="font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-          Cher(e) <strong>${name || "Monsieur / Madame"}</strong>,
-        </p>
-        <p style="font-size: 14px; line-height: 1.7; color: #4e5b66; margin: 0 0 24px;">
-          Nous avons le plaisir de vous informer que votre demande de rendez-vous avec Monsieur <strong>Touré Ahmed Bouah</strong> a été examinée et <strong>officiellement confirmée</strong> par le secrétariat de la Présidence.
-        </p>
-
-        <!-- Meeting Summary Box -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8f6f0; border: 1px solid #e6e2d8; margin: 0 0 28px;">
-          <tr>
-            <td style="padding: 20px;">
-              <p style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #8a6c35; font-weight: 700; margin: 0 0 14px;">
-                Détails du Rendez-vous
-              </p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px; color: #0f1c28;">
-                <tr>
-                  <td style="padding: 6px 0; width: 120px; color: #7a8793;">Date :</td>
-                  <td style="padding: 6px 0; font-weight: 600;">${formattedDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #7a8793;">Créneau horaire :</td>
-                  <td style="padding: 6px 0; font-weight: 600;">${preferred_time || "10:30"} (Heure d'Abidjan — GMT)</td>
-                </tr>
-                <tr>
-                  <td style="padding: 6px 0; color: #7a8793;">Format :</td>
-                  <td style="padding: 6px 0; font-weight: 600;">${formatLabel}</td>
-                </tr>
-                ${organization ? `
-                <tr>
-                  <td style="padding: 6px 0; color: #7a8793;">Organisation :</td>
-                  <td style="padding: 6px 0; font-weight: 600;">${organization}</td>
-                </tr>
-                ` : ""}
-              </table>
-            </td>
-          </tr>
-        </table>
-
-        <p style="font-size: 13px; line-height: 1.7; color: #4e5b66; margin: 0 0 20px;">
-          En cas d'empêchement ou pour toute modification préalable, nous vous prions de bien vouloir contacter notre cabinet au moins 24 heures à l'avance.
-        </p>
-
-        <div style="border-top: 1px solid #e6e2d8; padding-top: 24px; margin-top: 28px;">
-          <p style="font-size: 13px; font-weight: 600; color: #0f1c28; margin: 0;">
-            Le Secrétariat Général de SOPHIA S.A.
-          </p>
-          <p style="font-size: 12px; color: #7a8793; margin: 4px 0 0;">
-            Cocody 2 Plateaux, Abidjan · (+225) 27 22 41 15 68 · presidence@sophiasa.net
-          </p>
-        </div>
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style="background-color: #f4f0e6; padding: 18px 36px; text-align: center; font-size: 11px; color: #7a8793; border-top: 1px solid #e6e2d8;">
-        Ce message est confidentiel et destiné exclusivement à ${email}.
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
-
-    // 3. Send email using Nodemailer
-    let sent = false;
-    let messageId = "";
-    let previewUrl = "";
-
-    try {
-      // Check if custom SMTP exists in env
-      const smtpHost = process.env.SMTP_HOST;
-      const smtpUser = process.env.SMTP_USER;
-      const smtpPass = process.env.SMTP_PASS;
-
-      let transporter: ReturnType<typeof nodemailer.createTransport>;
-
-      if (smtpHost && smtpUser && smtpPass) {
-        transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: Number(process.env.SMTP_PORT || 587),
-          secure: process.env.SMTP_SECURE === "true",
-          auth: { user: smtpUser, pass: smtpPass },
-        });
-      } else {
-        // Fallback to test ethereal account for dev/staging verification
-        const testAccount = await nodemailer.createTestAccount();
-        transporter = nodemailer.createTransport({
-          host: "smtp.ethereal.email",
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
-        });
-      }
-
-      const info = await transporter.sendMail({
-        from: '"Cabinet de Touré Ahmed Bouah" <presidence@sophiasa.net>',
-        to: email,
-        subject: "Confirmation officielle de votre rendez-vous — Touré Ahmed Bouah",
-        html: emailHtml,
-      });
-
-      sent = true;
-      messageId = info.messageId;
-      previewUrl = nodemailer.getTestMessageUrl(info) || "";
-    } catch (mailErr: any) {
-      console.warn("Mail transport warning (fallback logged):", mailErr.message);
+    const details = parseMeetingRequest(meeting.message);
+    if (!details.date || !details.time) {
+      return NextResponse.json({ error: "The request does not contain a valid date and time." }, { status: 400 });
     }
+    if (details.status === "rejected") return NextResponse.json({ error: "This request has already been declined." }, { status: 409 });
 
-    return NextResponse.json({
-      success: true,
-      sent,
-      messageId,
-      previewUrl,
-      recipient: email,
-      status: "accepted",
+    const { data: others, error: othersError } = await supabase
+      .from("meeting_requests").select("id,message").neq("id", id).limit(500);
+    if (othersError) return NextResponse.json({ error: "Could not check time slot availability." }, { status: 500 });
+    const conflict = (others ?? []).some((other) => {
+      const otherDetails = parseMeetingRequest(other.message);
+      return otherDetails.status === "accepted" && otherDetails.date === details.date && otherDetails.time === details.time;
     });
-  } catch (err: any) {
-    console.error("Meeting confirmation error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (conflict) return NextResponse.json({ error: "This time slot has already been confirmed for another request." }, { status: 409 });
+
+    const name = String(meeting.name ?? "Participant");
+    const email = String(meeting.email ?? "");
+    if (!email) return NextResponse.json({ error: "This request has no email address." }, { status: 400 });
+    const acceptedMessage = withMeetingStatus(meeting.message, "accepted");
+    const { error: updateError } = await supabase.from("meeting_requests")
+      .update({ message: acceptedMessage }).eq("id", id);
+    if (updateError) return NextResponse.json({ error: "Could not confirm the request." }, { status: 500 });
+
+    const dateLabel = new Intl.DateTimeFormat("en-GB", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Abidjan",
+    }).format(new Date(`${details.date}T12:00:00Z`));
+    const formatLabel = "One-to-one video conference";
+    const organization = meeting.organization ? `<p><b>Organization:</b> ${escapeHtml(String(meeting.organization))}</p>` : "";
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || smtpUser,
+        to: email,
+        subject: "Your meeting is confirmed — Touré Ahmed Bouah",
+        html: `<!doctype html><html lang="en"><meta charset="utf-8"><body style="font-family:Arial,sans-serif;color:#0f1c28;background:#f8f6f0;padding:32px"><main style="max-width:560px;margin:auto;background:#fff;padding:32px;border-top:4px solid #b38938"><p>Hello ${escapeHtml(name)},</p><h1 style="font-size:22px">Your request is confirmed</h1><p>Your time slot has been booked with the office of Touré Ahmed Bouah.</p><p><b>Date:</b> ${dateLabel}<br><b>Time:</b> ${escapeHtml(details.time)} (Abidjan time)<br><b>Format:</b> ${formatLabel}</p>${organization}<p>For online meetings, connection details will be sent to you by the office.</p><p style="color:#68737d;font-size:12px">SOPHIA S.A. · Abidjan, Côte d’Ivoire</p></main></body></html>`,
+      });
+    } catch (mailError) {
+      await supabase.from("meeting_requests").update({ message: withMeetingStatus(meeting.message, "pending") }).eq("id", id);
+      console.error("Meeting confirmation email failed:", mailError);
+      const rawMessage = mailError instanceof Error ? mailError.message : String(mailError);
+      const diagnostic = rawMessage.replaceAll(smtpPass, "[redacted]").slice(0, 400);
+      return NextResponse.json({
+        error: "The confirmation email could not be sent. The time slot was not booked.",
+        diagnostic,
+      }, { status: 502 });
+    }
+
+    return NextResponse.json({ success: true, sent: true, status: "accepted" });
+  } catch (error) {
+    console.error("Meeting approval error:", error);
+    return NextResponse.json({ error: "Server error while approving the request." }, { status: 500 });
   }
 }

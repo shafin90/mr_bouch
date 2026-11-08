@@ -1,16 +1,16 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import type { Publication } from "@/data/types";
 
 export function PublicationCard({ publication }: { publication: Publication }) {
   return (
-    <article className="group flex gap-6 border border-border bg-ivory p-6 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift">
-      <div className="relative w-2/5 shrink-0 overflow-hidden bg-stone">
+    <article className="group flex flex-col md:flex-row gap-6 border border-border bg-ivory p-6 shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift">
+      <div className="relative md:w-2/5 shrink-0 overflow-hidden bg-stone">
         <div className="relative aspect-[16/9] w-full">
           <Image
             src={publication.cover.src}
             alt={publication.cover.alt}
             fill
-            sizes="(max-width: 768px) 50vw, 30vw"
+            sizes="(max-width: 768px) 100vw, 30vw"
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
         </div>
@@ -27,7 +27,7 @@ export function PublicationCard({ publication }: { publication: Publication }) {
         </p>
         {publication.placeholder ? (
           <p className="mt-3 text-xs italic text-slate/70">
-            Publication illustrative (placeholder) — contenu à compléter avec des informations vérifiées. Publication illustrative (placeholder) — contenu à compléter avec des informations vérifiées. Publication illustrative (placeholder) — contenu à compléter avec des informations vérifiées.
+            Publication illustrative du cabinet — document de référence disponible auprès du secrétariat.
           </p>
         ) : null}
       </div>

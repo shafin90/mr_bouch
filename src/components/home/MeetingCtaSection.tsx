@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 
-export function MeetingCtaSection() {
+export async function MeetingCtaSection() {
+  const content = await getPublishedPageContent("home");
+  const shared = await getPublishedPageContent("shared");
   return (
     <section
       style={{
@@ -24,13 +27,13 @@ export function MeetingCtaSection() {
           <div>
             <Reveal>
               <p className="eyebrow">
-                <span>✦</span> Cabinet &amp; Partenariats
+                <span>✦</span> {content.meetingEyebrow}
               </p>
             </Reveal>
 
             <Reveal delay={0.1}>
-              <h2 style={{ color: "#fff", marginBottom: 20 }}>
-                Chaque transformation<br />commence par une <em>rencontre.</em>
+              <h2 style={{ color: "#fff", marginBottom: 20, whiteSpace: "pre-line" }}>
+                {content.meetingTitle}
               </h2>
             </Reveal>
 
@@ -44,17 +47,17 @@ export function MeetingCtaSection() {
                   marginBottom: 32,
                 }}
               >
-                Partenariat foncier institutionnel, investissement dans les macro-lots d&apos;Akwaba City ou co-développement d&apos;infrastructures : le cabinet de Touré Ahmed Bouah est à votre écoute pour une consultation privée.
+                {content.meetingBody}
               </p>
             </Reveal>
 
             <Reveal delay={0.3}>
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 24 }}>
                 <Link href="/rendez-vous" className="btn-primary">
-                  Demander un rendez-vous ↗
+                  {content.meetingCta} ↗
                 </Link>
                 <Link href="/biographie" className="text-link-light">
-                  En savoir plus sur le parcours ↗
+                  {content.meetingSecondaryCta} ↗
                 </Link>
               </div>
             </Reveal>
@@ -85,10 +88,10 @@ export function MeetingCtaSection() {
                     marginBottom: 8,
                   }}
                 >
-                  Cabinet de la Présidence
+                  {content.meetingOfficeLabel}
                 </span>
                 <p style={{ color: "#fff", fontSize: "19px", fontFamily: "Georgia, serif", lineHeight: 1.4, margin: "0 0 6px" }}>
-                  SOPHIA S.A.
+                  {shared.officeName}
                 </p>
                 <p style={{ color: "rgba(255, 255, 255, 0.65)", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>
                   Cocody 2 Plateaux, Abidjan · Côte d&apos;Ivoire
@@ -109,15 +112,15 @@ export function MeetingCtaSection() {
                     marginBottom: 8,
                   }}
                 >
-                  Secrétariat Général
+                  {content.meetingSecretariatLabel}
                 </span>
                 <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "13px", margin: "0 0 6px" }}>
-                  Téléphone : <strong style={{ color: "#fff" }}>(+225) 27 22 41 15 68</strong>
+                  {shared.footerPhoneLabel} : <strong style={{ color: "#fff" }}>{shared.footerPhone}</strong>
                 </p>
                 <p style={{ color: "rgba(255, 255, 255, 0.7)", fontSize: "13px", margin: 0 }}>
-                  Courriel :{" "}
-                  <a href="mailto:presidence@sophiasa.net" style={{ color: "var(--gold)", textDecoration: "none" }}>
-                    presidence@sophiasa.net
+                  {shared.footerEmailLabel} :{" "}
+                  <a href={`mailto:${shared.footerEmail}`} style={{ color: "var(--gold)", textDecoration: "none" }}>
+                    {shared.footerEmail}
                   </a>
                 </p>
               </div>

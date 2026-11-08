@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navigationItems = [
-  { label: "À propos", href: "/biographie" },
-  { label: "Entrepreneuriat", href: "/entrepreneuriat" },
-  { label: "Engagements", href: "/engagements" },
-  { label: "Actualités", href: "/actualites" },
-];
-
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const navigationItems = [
+    { label: "Biography", href: "/biographie" },
+    { label: "Entrepreneurship", href: "/entrepreneuriat" },
+    { label: "Commitments", href: "/engagements" },
+    { label: "News", href: "/actualites" },
+    { label: "Publications", href: "/publications" },
+  ];
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -28,13 +28,13 @@ export function Header() {
       {/* Fixed Header */}
       <header className="site-header">
         {/* Wordmark */}
-        <Link href="/" className="wordmark" aria-label="Touré Ahmed Bouah — Accueil">
+        <Link href="/" className="wordmark" aria-label="Touré Ahmed Bouah — Home">
           TOURÉ <span>AHMED BOUAH</span>
         </Link>
 
         {/* Desktop Nav */}
         <nav
-          aria-label="Navigation principale"
+          aria-label="Main navigation"
           className="hidden lg:flex items-center gap-8 mx-auto"
           style={{ letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "12px" }}
         >
@@ -62,21 +62,21 @@ export function Header() {
         </nav>
 
         {/* CTA */}
-        <div className="hidden lg:flex items-center">
+        <div className="ml-auto flex items-center gap-4">
           <Link
             href="/rendez-vous"
-            className="btn-primary"
+            className="btn-primary hidden lg:inline-flex"
             style={{ marginLeft: "auto" }}
           >
-            Prendre contact <span aria-hidden="true" style={{ marginLeft: 8 }}>↗</span>
+            Book a meeting <span aria-hidden="true" style={{ marginLeft: 8 }}>↗</span>
           </Link>
         </div>
 
         {/* Mobile hamburger */}
         <button
           type="button"
-          aria-label="Ouvrir le menu"
-          className="lg:hidden ml-auto flex flex-col gap-[5px] p-2 w-10"
+          aria-label="Open menu"
+          className="lg:hidden flex flex-col gap-[5px] p-2 w-10"
           onClick={() => setOpen(true)}
           style={{ cursor: "pointer" }}
         >
@@ -107,7 +107,7 @@ export function Header() {
             <span className="wordmark" style={{ fontSize: 18 }}>TOURÉ <span>AHMED BOUAH</span></span>
             <button
               type="button"
-              aria-label="Fermer le menu"
+              aria-label="Close menu"
               onClick={() => setOpen(false)}
               style={{ color: "#fff", cursor: "pointer", background: "none", border: "none", fontSize: 24 }}
             >
@@ -116,7 +116,7 @@ export function Header() {
           </div>
 
           <nav aria-label="Mobile navigation" style={{ borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", flexDirection: "column" }}>
-            {[{ label: "Accueil", href: "/" }, ...navigationItems].map((item) => (
+            {[{ label: "Home", href: "/" }, ...navigationItems].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -141,7 +141,7 @@ export function Header() {
             className="btn-primary"
             style={{ width: "100%", marginTop: 28, justifyContent: "center" }}
           >
-            Prendre contact ↗
+            Book a meeting ↗
           </Link>
         </div>
       )}
@@ -155,7 +155,7 @@ export function Header() {
       )}
 
       {/* Spacer for fixed header */}
-      <div style={{ height: "82px" }} />
+      <div style={{ height: "80px" }} />
     </>
   );
 }

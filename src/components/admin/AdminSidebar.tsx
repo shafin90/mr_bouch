@@ -10,14 +10,19 @@ import {
   Home,
   LogOut,
   ExternalLink,
-  BarChart3
+  BarChart3,
+  BookOpen,
+  PlusCircle,
+  FileText,
 } from "lucide-react";
 
 const items = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Actualités & Blog", href: "/admin/news", icon: Newspaper },
-  { label: "Événements", href: "/admin/events", icon: Calendar },
-  { label: "Rendez-vous", href: "/admin/meetings", icon: Clock },
+  { label: "News", href: "/admin/news", icon: Newspaper },
+  { label: "Events", href: "/admin/events", icon: Calendar },
+  { label: "Meetings", href: "/admin/meetings", icon: Clock },
+  { label: "Books & essays", href: "/admin/books", icon: BookOpen },
+  { label: "Page content", href: "/admin/content", icon: FileText },
 ];
 
 export function AdminSidebar() {
@@ -33,7 +38,11 @@ export function AdminSidebar() {
         borderRight: "1px solid rgba(255, 255, 255, 0.1)",
         display: "flex",
         flexDirection: "column",
-        minHeight: "100vh",
+        position: "sticky",
+        top: 0,
+        alignSelf: "flex-start",
+        height: "100vh",
+        overflowY: "auto",
       }}
     >
       {/* Brand Header */}
@@ -69,10 +78,12 @@ export function AdminSidebar() {
       {/* Main Navigation */}
       <nav style={{ padding: "20px 14px", display: "flex", flexDirection: "column", gap: 6, flexGrow: 1 }}>
         <p style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(255,255,255,0.4)", fontWeight: 700, padding: "0 10px 6px" }}>
-          Menu Principal
+          Main menu
         </p>
         {items.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href
+            || (item.href === "/admin/news" && pathname.startsWith("/admin/news/") && pathname !== "/admin/news/new")
+            || (item.href === "/admin/events" && pathname.startsWith("/admin/events/"));
           const Icon = item.icon;
           return (
             <Link
@@ -101,7 +112,7 @@ export function AdminSidebar() {
 
         <div style={{ margin: "20px 0 10px", borderTop: "1px solid rgba(255, 255, 255, 0.08)", paddingTop: 16 }}>
           <p style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(255,255,255,0.4)", fontWeight: 700, padding: "0 10px 6px" }}>
-            Site Public
+            Public site
           </p>
           <Link
             href="/"
@@ -153,7 +164,7 @@ export function AdminSidebar() {
           className="hover:bg-white/5 hover:text-red-300"
         >
           <LogOut style={{ width: 15, height: 15 }} />
-          <span>Déconnexion</span>
+          <span>Sign out</span>
         </button>
       </div>
     </aside>

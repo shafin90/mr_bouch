@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteChrome } from "@/components/layout/SiteChrome";
+import { getPublishedPageContent } from "@/lib/site-content";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -19,19 +20,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Touré Ahmed Bouah | Entrepreneur, auteur & philanthrope",
+  title: "Touré Ahmed Bouah | Entrepreneur, author & philanthropist",
   description:
-    "Découvrez le parcours et les engagements de Touré Ahmed Bouah, fondateur de SOPHIA et de la Fondation Solidarité & Développement.",
+    "Public profile, projects and news about Touré Ahmed Bouah, CEO of SOPHIA S.A.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sharedContent = await getPublishedPageContent("shared");
   return (
     <html
-      lang="fr"
+      lang="en"
       className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" style={{ background: "var(--paper)", color: "var(--ink)" }}>
-        <SiteChrome>{children}</SiteChrome>
+        <SiteChrome sharedContent={sharedContent}>{children}</SiteChrome>
       </body>
     </html>
   );

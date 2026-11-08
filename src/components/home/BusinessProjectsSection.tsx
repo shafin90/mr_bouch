@@ -1,15 +1,15 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 
 const flagshipProjects = [
   {
     num: "01",
     tag: "VILLE NOUVELLE · GRAND ABIDJAN",
     title: "Akwaba City",
-    scale: "12 000+ Hectares",
-    desc: "Projet urbain d'envergure nationale reliant Abidjan et Anyama. Une cité intégrée comprenant quartiers d'affaires, zones résidentielles, pôles technologiques et corridors de transport multimodal.",
-    specs: "Décret d'utilité publique · Titres ACD garantis",
+    scale: "Grand Abidjan",
+    desc: "Projet de ville nouvelle présenté sur le corridor Abidjan–Anyama. Le périmètre, le calendrier, les autorisations et les besoins de partenariat sont à confirmer dans un dossier projet daté.",
+    specs: "Statut et pièces justificatives à présenter en dossier projet",
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80",
     href: "/entrepreneuriat#akwaba",
   },
@@ -18,34 +18,47 @@ const flagshipProjects = [
     tag: "HUB LOGISTIQUE & TRANSPORT",
     title: "Pôle Logistique d'Anyama",
     scale: "Plateforme Régionale",
-    desc: "Infrastructures de fret connectées aux corridors autoroutiers nord pour fluidifier le transit de marchandises vers l'intérieur du pays et l'hinterland sous-régional.",
-    specs: "Connexion autoroutière directe · Entrepôts sécurisés",
+    desc: "Piste de développement logistique autour d'Anyama, destinée à répondre aux besoins de fret et de stockage. Le périmètre et le niveau d'avancement doivent être précisés.",
+    specs: "Concept présenté · détails opérationnels à confirmer",
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80",
-    href: "/entrepreneuriat#logistique",
+    href: "/entrepreneuriat#projets",
   },
   {
     num: "03",
     tag: "SÉCURISATION FONCIÈRE",
     title: "Lotissements Viabilisés ACD",
     scale: "Portefeuille Institutionnel",
-    desc: "Parcelles prêtes à bâtir avec voirie, eau potable et électricité, délivrées avec Arrêté de Concession Définitive (ACD) pour promoteurs et investisseurs privés.",
-    specs: "Purge coutumière certifiée · Zéro contentieux",
+    desc: "Offre d'aménagement foncier destinée aux promoteurs et investisseurs. La disponibilité, la viabilisation et les titres doivent être vérifiés parcelle par parcelle avant tout engagement.",
+    specs: "Documents fonciers et état de viabilisation à vérifier",
     image: "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=800&q=80",
-    href: "/entrepreneuriat#foncier",
+    href: "/entrepreneuriat#projets",
   },
   {
     num: "04",
     tag: "HABITAT & MIXITÉ URBAINE",
     title: "Programmes Résidentiels & Éco-Cités",
     scale: "Standing Élevé & Mixte",
-    desc: "Conception de résidences modernes et respectueuses de l'environnement, intégrant espaces verts, commerces de proximité et équipements scolaires.",
-    specs: "Conception bioclimatique · Cadre de vie préservé",
+    desc: "Pistes de programmes résidentiels et mixtes. Les études, les équipements prévus et le calendrier de réalisation seront communiqués lorsqu'ils seront disponibles.",
+    specs: "Programme indicatif · études à documenter",
     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
-    href: "/entrepreneuriat#residentiel",
+    href: "/entrepreneuriat#projets",
   },
 ];
 
-export function BusinessProjectsSection() {
+export async function BusinessProjectsSection() {
+  const [content, entrepreneurship] = await Promise.all([
+    getPublishedPageContent("home"),
+    getPublishedPageContent("entrepreneurship"),
+  ]);
+  const projects = flagshipProjects.map((project, index) => ({
+    ...project,
+    image: content[`project${index + 1}Image`] || project.image,
+    title: entrepreneurship[`investorProject${index + 1}Title`],
+    desc: entrepreneurship[`investorProject${index + 1}Body`],
+    specs: entrepreneurship[`investorProject${index + 1}Status`],
+    tag: content[`project${index + 1}Tag`],
+    scale: content[`project${index + 1}Scale`],
+  }));
   return (
     <section style={{ background: "var(--cream)", padding: "clamp(70px, 9vw, 110px) 0" }}>
       <div className="container-x">
@@ -54,35 +67,31 @@ export function BusinessProjectsSection() {
           <div>
             <Reveal>
               <p className="eyebrow-dark">
-                <span className="section-marker">02</span> Entrepreneuriat &amp; Mégaprojets
+                <span className="section-marker">02</span> {content.projectEyebrow.replace(/^02\s*/, "")}
               </p>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 style={{ maxWidth: 640 }}>
-                Des Réalisations <em>Structurantes</em><br />pour le Territoire.
-              </h2>
+              <h2 style={{ maxWidth: 640, whiteSpace: "pre-line" }}>{content.projectTitle}</h2>
             </Reveal>
           </div>
           <Reveal delay={0.2}>
             <Link href="/entrepreneuriat" className="text-link">
-              Consulter tous les programmes ↗
+              {content.projectCta} ↗
             </Link>
           </Reveal>
         </div>
 
         {/* 2x2 Clean Structured Investor Cards (High Eye Comfort) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 480px), 1fr))", gap: "24px" }}>
-          {flagshipProjects.map((p, idx) => (
+          {projects.map((p, idx) => (
             <Reveal key={p.title} delay={idx * 0.08}>
               <div className="peaceful-project-card">
                 {/* Photo Top with Fixed Aspect Ratio */}
                 <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", overflow: "hidden", background: "#10283a" }}>
-                  <Image
+                  <img
                     src={p.image}
                     alt={p.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 45vw"
-                    style={{ objectFit: "cover", filter: "saturate(0.75)" }}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "saturate(0.75)" }}
                   />
                   <div
                     style={{
@@ -99,7 +108,7 @@ export function BusinessProjectsSection() {
                       border: "1px solid rgba(255, 255, 255, 0.15)",
                     }}
                   >
-                    Projet #{p.num}
+                    Projet #{p.num} · Illustratif
                   </div>
                 </div>
 
@@ -149,13 +158,13 @@ export function BusinessProjectsSection() {
                       gap: 8,
                     }}
                   >
-                    <span style={{ color: "var(--gold)" }}>✓</span>
+                    <span style={{ color: "var(--gold)" }}>i</span>
                     <span>{p.specs}</span>
                   </div>
 
                   <div style={{ paddingTop: 4 }}>
                     <Link href={p.href} className="text-link">
-                      Détails de l&apos;opération ↗
+                      {idx === 0 ? "Voir le statut et les sources" : "Voir dans le portefeuille"} ↗
                     </Link>
                   </div>
                 </div>

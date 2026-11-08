@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { ReservationForm } from "@/components/events/ReservationForm";
+import { getPublishedPageContent } from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "Réservation — Touré Ahmed Bouah",
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 
 export default async function ReservationPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const content = await getPublishedPageContent("events");
   const supabase = await createClient();
   const { data: event } = await supabase.from("events").select("*").eq("slug", slug).eq("status", "published").single();
 
@@ -25,10 +27,10 @@ export default async function ReservationPage({ params }: { params: Promise<{ sl
   return (
     <section className="bg-ivory py-24 md:py-32">
       <div className="container-x max-w-2xl">
-        <h1 className="font-display text-4xl text-navy">Réserver ma place</h1>
+        <h1 className="font-display text-4xl text-navy">{content.bookingTitle}</h1>
         <p className="mt-4 text-base text-slate">{event.title} — {event.event_date}</p>
         <div className="mt-8">
-          <ReservationForm eventId={event.id} maxSeats={event.max_seats_per_registration ?? 1} />
+          <ReservationForm eventId={event.id} maxSeats={event.max_seats_per_registration ?? 1} copy={content} />
         </div>
       </div>
     </section>

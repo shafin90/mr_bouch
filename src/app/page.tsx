@@ -1,11 +1,11 @@
 ﻿import type { Metadata } from "next";
 import { HeroSection } from "@/components/home/HeroSection";
-import { BackgroundSection } from "@/components/home/BackgroundSection";
 import { BusinessProjectsSection } from "@/components/home/BusinessProjectsSection";
 import { EngagementsSection } from "@/components/home/EngagementsSection";
 import { PublicationsSection } from "@/components/home/PublicationsSection";
 import { NewsSection } from "@/components/home/NewsSection";
 import { MeetingCtaSection } from "@/components/home/MeetingCtaSection";
+import { UpcomingEventsSection } from "@/components/home/UpcomingEventsSection";
 
 export const metadata: Metadata = {
   title: "Touré Ahmed Bouah — Entrepreneur, auteur & philanthrope",
@@ -17,11 +17,11 @@ export default function Home() {
   return (
     <>
       <HeroSection />
-      <BackgroundSection />
       <BusinessProjectsSection />
+      <UpcomingEventsSection />
       <EngagementsSection />
-      <PublicationsSection />
       <NewsSection />
+      <PublicationsSection />
       <MeetingCtaSection />
     </>
   );

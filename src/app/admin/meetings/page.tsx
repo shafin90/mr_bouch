@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { parseMeetingRequest, withMeetingStatus } from "@/lib/meeting-request";
 import {
   Clock,
   CheckCircle2,
@@ -15,8 +16,16 @@ import {
   AlertCircle,
   ExternalLink,
   Search,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+const MEETING_TIMESLOTS = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
+
+function localDateKey(year: number, month: number, day: number) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 export default function AdminMeetingsPage() {
   const [meetings, setMeetings] = useState<any[]>([]);
@@ -24,7 +33,17 @@ export default function AdminMeetingsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "in_person" | "online">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "declined">("all");
+  const [activeTab, setActiveTab] = useState<"slots" | "requests">("slots");
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selectedCalendarTime, setSelectedCalendarTime] = useState<string | null>(null);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState(() => {
+    const now = new Date();
+    return localDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  });
 
   function showToast(message: string, type: "success" | "error" = "success") {
     setToast({ message, type });
@@ -61,22 +80,16 @@ export default function AdminMeetingsPage() {
       const res = await fetch("/api/meetings/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: meeting.id,
-          name: meeting.name,
-          email: meeting.email,
-          organization: meeting.organization,
-          preferred_date: meeting.preferred_date || new Date().toISOString().split("T")[0],
-          preferred_time: meeting.preferred_time || "10:30",
-          meeting_type: meeting.meeting_type || "in_person",
-          status: "accepted",
-        }),
+        body: JSON.stringify({ id: meeting.id }),
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Échec de l'envoi de l'email");
+      if (!res.ok) {
+        const diagnostic = typeof result.diagnostic === "string" ? ` — ${result.diagnostic}` : "";
+        throw new Error(`${result.error || "Échec de l'envoi de l'email"}${diagnostic}`);
+      }
 
-      showToast(`Rendez-vous confirmé ! Email de confirmation envoyé à ${meeting.email}`, "success");
+      showToast(`Créneau réservé et email de confirmation envoyé à ${meeting.email}`, "success");
       await loadMeetings();
     } catch (err: any) {
       console.error("Confirm error:", err);
@@ -90,12 +103,14 @@ export default function AdminMeetingsPage() {
     setProcessingId(id);
     try {
       const supabase = createClient();
-      await supabase
+      const meeting = meetings.find((item) => item.id === id);
+      const { error } = await supabase
         .from("meeting_requests")
         .update({
-          message: `[Statut: refusé] Décliné le ${new Date().toLocaleDateString("fr-FR")}`,
+          message: withMeetingStatus(meeting?.message, "rejected"),
         })
         .eq("id", id);
+      if (error) throw error;
 
       showToast("Demande marquée comme déclinée.", "success");
       await loadMeetings();
@@ -114,9 +129,41 @@ export default function AdminMeetingsPage() {
       (m.organization || "").toLowerCase().includes(q) ||
       (m.message || "").toLowerCase().includes(q);
 
-    if (filterType === "all") return matchSearch;
-    return matchSearch && m.meeting_type === filterType;
+    const details = parseMeetingRequest(m.message);
+    const status = details.status === "accepted" || m.status === "accepted"
+      ? "approved"
+      : details.status === "rejected" || m.status === "rejected"
+        ? "declined"
+        : "pending";
+    const matchStatus = filterStatus === "all" || status === filterStatus;
+    return matchSearch && matchStatus;
   });
+
+  const calendarSlots = new Map<string, { booked: any[]; pending: any[] }>();
+  meetings.forEach((meeting) => {
+    const details = parseMeetingRequest(meeting.message);
+    if (!details.date || !details.time) return;
+    const key = `${details.date}|${details.time}`;
+    const slot = calendarSlots.get(key) ?? { booked: [], pending: [] };
+    if (details.status === "accepted" || meeting.status === "accepted") slot.booked.push(meeting);
+    else if (details.status !== "rejected" && meeting.status !== "rejected") slot.pending.push(meeting);
+    calendarSlots.set(key, slot);
+  });
+
+  const daysInCalendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+  const calendarStartOffset = (new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay() + 6) % 7;
+  const now = new Date();
+  const todayKey = localDateKey(now.getFullYear(), now.getMonth(), now.getDate());
+  const selectedDayLabel = new Date(`${selectedCalendarDay}T12:00:00`).toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+
+  function changeCalendarMonth(offset: number) {
+    const nextMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+    setCalendarMonth(nextMonth);
+    setSelectedCalendarDay(localDateKey(nextMonth.getFullYear(), nextMonth.getMonth(), 1));
+    setSelectedCalendarTime(null);
+  }
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
@@ -175,6 +222,27 @@ export default function AdminMeetingsPage() {
         </button>
       </div>
 
+      <div role="tablist" aria-label="Vue des rendez-vous" style={{ display: "flex", gap: 8, borderBottom: "1px solid var(--border)" }}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "slots"}
+          onClick={() => setActiveTab("slots")}
+          style={{ padding: "12px 18px", border: "none", borderBottom: activeTab === "slots" ? "3px solid var(--gold)" : "3px solid transparent", background: "transparent", color: activeTab === "slots" ? "var(--navy)" : "var(--muted)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          Créneaux horaires
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "requests"}
+          onClick={() => setActiveTab("requests")}
+          style={{ padding: "12px 18px", border: "none", borderBottom: activeTab === "requests" ? "3px solid var(--gold)" : "3px solid transparent", background: "transparent", color: activeTab === "requests" ? "var(--navy)" : "var(--muted)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+        >
+          Liste des demandes
+        </button>
+      </div>
+
       {/* Summary KPI Strip */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
         <div style={{ background: "#fff", border: "1px solid var(--border)", padding: "20px 24px" }}>
@@ -198,12 +266,114 @@ export default function AdminMeetingsPage() {
             En attente de validation
           </p>
           <p style={{ fontFamily: "Georgia, serif", fontSize: "28px", color: "var(--navy)", margin: "6px 0 0" }}>
-            {meetings.filter((m) => !(m.message || "").includes("accepted") && !(m.message || "").includes("refusé")).length}
+            {meetings.filter((m) => parseMeetingRequest(m.message).status === "pending").length}
           </p>
         </div>
       </div>
 
+      {/* Day-by-day availability calendar */}
+      {activeTab === "slots" && <section style={{ background: "#fff", border: "1px solid var(--border)" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
+          <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)" }}>Disponibilités</span>
+          <h2 style={{ fontFamily: "Georgia, serif", fontSize: "25px", color: "var(--navy)", margin: "4px 0 0" }}>Calendrier des créneaux</h2>
+          <p style={{ fontSize: "12px", color: "var(--muted)", margin: "5px 0 0" }}>Heure d’Abidjan. Les créneaux approuvés sont réservés; les demandes en attente restent à valider.</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))" }}>
+          <div style={{ padding: 22, borderRight: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <button type="button" aria-label="Mois précédent" onClick={() => changeCalendarMonth(-1)} style={{ display: "grid", placeItems: "center", width: 34, height: 34, border: "1px solid var(--border)", background: "#fff", color: "var(--navy)", cursor: "pointer" }}><ChevronLeft size={17} /></button>
+              <h3 style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 19, color: "var(--navy)", textTransform: "capitalize" }}>{calendarMonth.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}</h3>
+              <button type="button" aria-label="Mois suivant" onClick={() => changeCalendarMonth(1)} style={{ display: "grid", placeItems: "center", width: 34, height: 34, border: "1px solid var(--border)", background: "#fff", color: "var(--navy)", cursor: "pointer" }}><ChevronRight size={17} /></button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 5, textAlign: "center" }}>
+              {["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"].map((day) => <span key={day} style={{ padding: "6px 0", color: "var(--muted)", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>{day}</span>)}
+              {Array.from({ length: calendarStartOffset }, (_, index) => <span key={`empty-${index}`} />)}
+              {Array.from({ length: daysInCalendarMonth }, (_, index) => {
+                const day = index + 1;
+                const dateKey = localDateKey(calendarMonth.getFullYear(), calendarMonth.getMonth(), day);
+                const daySlots = MEETING_TIMESLOTS.map((time) => calendarSlots.get(`${dateKey}|${time}`) ?? { booked: [], pending: [] });
+                const bookedCount = daySlots.filter((slot) => slot.booked.length > 0).length;
+                const pendingCount = daySlots.filter((slot) => !slot.booked.length && slot.pending.length > 0).length;
+                const isPastDate = dateKey < todayKey;
+                const selected = selectedCalendarDay === dateKey;
+                const background = bookedCount ? "#fee2e2" : pendingCount ? "#fef3c7" : isPastDate ? "#f1f5f9" : "#f0fdf4";
+                const color = bookedCount ? "#991b1b" : pendingCount ? "#92400e" : isPastDate ? "#94a3b8" : "#166534";
+                return <button key={dateKey} type="button" onClick={() => { setSelectedCalendarDay(dateKey); setSelectedCalendarTime(null); }} aria-pressed={selected} style={{ minHeight: 48, padding: "4px 2px", border: selected ? "2px solid var(--navy)" : "1px solid transparent", borderRadius: 5, background, color, cursor: "pointer", fontWeight: selected ? 800 : 600, fontSize: 12 }}>
+                  <span>{day}</span>
+                  {(bookedCount > 0 || pendingCount > 0) && <span style={{ display: "block", marginTop: 2, fontSize: 8, fontWeight: 700 }}>{bookedCount ? `${bookedCount} rés.` : `${pendingCount} en att.`}</span>}
+                </button>;
+              })}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 18, fontSize: 10, color: "var(--muted)" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 2, background: "#f0fdf4", border: "1px solid #86efac" }} />Disponible</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 2, background: "#fef3c7", border: "1px solid #fcd34d" }} />En attente</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><i style={{ width: 10, height: 10, borderRadius: 2, background: "#fee2e2", border: "1px solid #fca5a5" }} />Réservé</span>
+            </div>
+          </div>
+
+          <div style={{ padding: 22 }}>
+            <div style={{ marginBottom: 15 }}>
+              <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--gold)" }}>Créneaux du jour</p>
+              <h3 style={{ margin: "4px 0 0", fontFamily: "Georgia, serif", fontSize: 20, color: "var(--navy)", textTransform: "capitalize" }}>{selectedDayLabel}</h3>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 9 }}>
+              {MEETING_TIMESLOTS.map((time) => {
+                const slot = calendarSlots.get(`${selectedCalendarDay}|${time}`) ?? { booked: [], pending: [] };
+                const booking = slot.booked[0];
+                const request = slot.pending[0];
+                const state = booking ? "booked" : request ? "pending" : selectedCalendarDay < todayKey ? "past" : "available";
+                const colors = state === "booked"
+                  ? { background: "#fef2f2", border: "#fecaca", color: "#991b1b", label: "Réservé", person: booking.name }
+                  : state === "pending"
+                    ? { background: "#fffbeb", border: "#fde68a", color: "#92400e", label: "Demande en attente", person: request.name }
+                    : state === "past"
+                      ? { background: "#f1f5f9", border: "#e2e8f0", color: "#64748b", label: "Passé", person: "" }
+                      : { background: "#f0fdf4", border: "#bbf7d0", color: "#166534", label: "Disponible", person: "" };
+                const selected = selectedCalendarTime === time;
+                return <button key={time} type="button" onClick={() => setSelectedCalendarTime(time)} aria-pressed={selected} style={{ textAlign: "left", padding: "12px 13px", border: selected ? "2px solid var(--navy)" : `1px solid ${colors.border}`, borderRadius: 6, background: colors.background, color: colors.color, cursor: "pointer" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5 }}><strong style={{ fontSize: 15 }}>{time}</strong><span style={{ fontSize: 9, fontWeight: 700 }}>{colors.label}</span></div>
+                  {colors.person && <p style={{ margin: "5px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 10 }}>{colors.person}</p>}
+                </button>;
+              })}
+            </div>
+            {selectedCalendarTime && (() => {
+              const slot = calendarSlots.get(`${selectedCalendarDay}|${selectedCalendarTime}`) ?? { booked: [], pending: [] };
+              const people = [
+                ...slot.booked.map((meeting: any) => ({ meeting, status: "Réservé" })),
+                ...slot.pending.map((meeting: any) => ({ meeting, status: "En attente" })),
+              ];
+              return <div style={{ marginTop: 18, padding: 16, border: "1px solid var(--border)", borderLeft: `4px solid ${slot.booked.length ? "#b91c1c" : slot.pending.length ? "#d97706" : "#15803d"}`, background: "#fafaf9" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)" }}>Détails du créneau</p>
+                    <h4 style={{ margin: "4px 0 0", fontFamily: "Georgia, serif", fontSize: 18, color: "var(--navy)", textTransform: "capitalize" }}>{selectedDayLabel} · {selectedCalendarTime}</h4>
+                  </div>
+                  <button type="button" onClick={() => setSelectedCalendarTime(null)} aria-label="Fermer les détails" style={{ border: "none", background: "transparent", color: "var(--muted)", fontSize: 18, cursor: "pointer" }}>×</button>
+                </div>
+                {people.length === 0 ? <p style={{ margin: 0, fontSize: 12, color: "#166534" }}>Aucune personne associée : ce créneau est disponible.</p> : <div style={{ display: "grid", gap: 10 }}>
+                  {people.map(({ meeting, status }: { meeting: any; status: string }) => {
+                    const details = parseMeetingRequest(meeting.message);
+                    const requestMessage = meeting.message?.split(/Objet \/ Message\s*:\s*/i).slice(1).join("").trim();
+                    return <div key={meeting.id} style={{ padding: 12, border: "1px solid var(--border)", background: "#fff" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
+                        <strong style={{ color: "var(--navy)", fontSize: 14 }}>{meeting.name || "Nom non renseigné"}</strong>
+                        <span style={{ padding: "3px 8px", borderRadius: 12, background: status === "Réservé" ? "#fee2e2" : "#fef3c7", color: status === "Réservé" ? "#991b1b" : "#92400e", fontSize: 10, fontWeight: 700 }}>{status}</span>
+                      </div>
+                      <a href={`mailto:${meeting.email}`} style={{ display: "inline-block", marginTop: 5, color: "var(--ink)", fontSize: 12 }}>{meeting.email}</a>
+                      {meeting.organization && <p style={{ margin: "5px 0 0", color: "var(--muted)", fontSize: 11 }}>Organisation : {meeting.organization}</p>}
+                      <p style={{ margin: "5px 0 0", color: "var(--muted)", fontSize: 11 }}>Format: Video conference</p>
+                      {requestMessage && <p style={{ margin: "9px 0 0", paddingTop: 8, borderTop: "1px solid var(--border)", color: "var(--ink)", fontSize: 12, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{requestMessage}</p>}
+                    </div>;
+                  })}
+                </div>}
+              </div>;
+            })()}
+          </div>
+        </div>
+      </section>}
+
       {/* Search & Filter Bar */}
+      {activeTab === "requests" && <>
       <div
         style={{
           background: "#fff",
@@ -229,13 +399,15 @@ export default function AdminMeetingsPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Filter style={{ width: 14, height: 14, color: "var(--muted)" }} />
           <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
+            aria-label="Filtrer par statut"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
             style={{ border: "1px solid var(--border)", padding: "6px 12px", fontSize: "12px", background: "#fff", outline: "none" }}
           >
-            <option value="all">Tous les formats</option>
-            <option value="in_person">En personne (Cocody)</option>
-            <option value="online">Visioconférence</option>
+            <option value="all">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="approved">Approuvées</option>
+            <option value="declined">Déclinées</option>
           </select>
         </div>
       </div>
@@ -254,8 +426,9 @@ export default function AdminMeetingsPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {filtered.map((m, idx) => {
-              const isAccepted = (m.message || "").includes("accepted") || m.status === "accepted";
-              const isRejected = (m.message || "").includes("refusé") || m.status === "rejected";
+              const details = parseMeetingRequest(m.message);
+              const isAccepted = details.status === "accepted" || m.status === "accepted";
+              const isRejected = details.status === "rejected" || m.status === "rejected";
               const isPending = !isAccepted && !isRejected;
 
               return (
@@ -314,11 +487,11 @@ export default function AdminMeetingsPage() {
                         </span>
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <Clock style={{ width: 13, height: 13, color: "var(--gold)" }} />
-                          Format : {m.meeting_type === "in_person" ? "En personne (Siège SOPHIA)" : "Visioconférence"}
+                          Format: One-to-one video conference
                         </span>
                         <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           <Calendar style={{ width: 13, height: 13, color: "var(--gold)" }} />
-                          Date souhaitée : {m.preferred_date || "Selon agenda"} {m.preferred_time ? `à ${m.preferred_time}` : ""}
+                          Date demandée : {details.date || m.preferred_date || "Non précisée"} {details.time || m.preferred_time ? `à ${details.time || m.preferred_time}` : ""}
                         </span>
                       </div>
                     </div>
@@ -348,7 +521,7 @@ export default function AdminMeetingsPage() {
                         <span>{processingId === m.id ? "Envoi email..." : isAccepted ? "Confirmé" : "Approuver & Confirmer"}</span>
                       </button>
 
-                      {!isRejected && (
+                      {!isRejected && !isAccepted && (
                         <button
                           onClick={() => handleReject(m.id)}
                           disabled={processingId === m.id}
@@ -396,6 +569,7 @@ export default function AdminMeetingsPage() {
           </div>
         )}
       </div>
+      </>}
     </div>
   );
 }

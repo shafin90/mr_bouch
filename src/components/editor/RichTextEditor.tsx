@@ -2,12 +2,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { NodeViewProps, ReactNodeViewRenderer, useEditor, EditorContent, NodeViewWrapper } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import LinkExtension from "@tiptap/extension-link";
 import ImageExtension from "@tiptap/extension-image";
+import { mergeAttributes } from "@tiptap/core";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import CharacterCount from "@tiptap/extension-character-count";
@@ -24,6 +25,100 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import { createClient } from "@/lib/supabase/client";
 import "./editor.css";
+
+function ResizableImageView({ node, selected, updateAttributes }: NodeViewProps) {
+  const storedWidth = Number(node.attrs.width) || null;
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
+  const resizeState = useRef<{ startX: number; startWidth: number; maxWidth: number; currentWidth: number } | null>(null);
+  const displayedWidth = previewWidth ?? storedWidth;
+
+  function onResizeStart(event: React.PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    const wrapper = event.currentTarget.parentElement;
+    const image = wrapper?.querySelector("img");
+    const editor = wrapper?.closest(".tiptap");
+    const startWidth = image?.getBoundingClientRect().width ?? wrapper?.getBoundingClientRect().width ?? 320;
+    const maxWidth = editor?.getBoundingClientRect().width ?? startWidth;
+    resizeState.current = { startX: event.clientX, startWidth, maxWidth, currentWidth: startWidth };
+    setPreviewWidth(startWidth);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onResizeMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const state = resizeState.current;
+    if (!state) return;
+    const nextWidth = Math.round(Math.max(80, Math.min(state.maxWidth, state.startWidth + event.clientX - state.startX)));
+    state.currentWidth = nextWidth;
+    setPreviewWidth(nextWidth);
+  }
+
+  function onResizeEnd(event: React.PointerEvent<HTMLButtonElement>) {
+    const state = resizeState.current;
+    if (!state) return;
+    updateAttributes({ width: Math.round(state.currentWidth) });
+    resizeState.current = null;
+    setPreviewWidth(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function onResizeKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const wrapper = event.currentTarget.parentElement;
+    const image = wrapper?.querySelector("img");
+    const editorWidth = wrapper?.closest(".tiptap")?.getBoundingClientRect().width ?? 320;
+    const current = image?.getBoundingClientRect().width ?? 320;
+    const delta = event.key === "ArrowRight" ? 32 : -32;
+    updateAttributes({ width: Math.round(Math.max(80, Math.min(editorWidth, current + delta))) });
+  }
+
+  return (
+    <NodeViewWrapper
+      className={`resizable-image-node${selected ? " is-selected" : ""}`}
+      style={{ width: displayedWidth ? `${displayedWidth}px` : "max-content" }}
+      data-resized-width={storedWidth || undefined}
+    >
+      <img src={node.attrs.src} alt={node.attrs.alt || ""} title={node.attrs.title || undefined} draggable={false} />
+      {selected && (
+        <button
+          type="button"
+          className="image-resize-handle"
+          contentEditable={false}
+          title="Faites glisser pour redimensionner · utilisez les flèches du clavier"
+          aria-label={`Redimensionner l’image${displayedWidth ? `, ${Math.round(displayedWidth)} pixels` : ""}`}
+          onPointerDown={onResizeStart}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeEnd}
+          onPointerCancel={onResizeEnd}
+          onKeyDown={onResizeKeyDown}
+        />
+      )}
+    </NodeViewWrapper>
+  );
+}
+
+const ResizableImage = ImageExtension.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (element) => {
+          const value = element.getAttribute("width");
+          return value ? Number.parseInt(value, 10) || null : null;
+        },
+        renderHTML: (attributes) => attributes.width ? { width: attributes.width } : {},
+      },
+    };
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["img", mergeAttributes(this.options.HTMLAttributes, HTMLAttributes)];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageView);
+  },
+});
 
 import {
   Bold,
@@ -140,7 +235,7 @@ export function RichTextEditor({
           rel: "noopener noreferrer",
         },
       }),
-      ImageExtension.configure({
+      ResizableImage.configure({
         inline: false,
         allowBase64: true,
       }),
@@ -947,6 +1042,7 @@ export function RichTextEditor({
         {viewMode === "edit" && (
           <div style={{ minHeight }} className="cursor-text">
             <EditorContent editor={editor} className="tiptap prose max-w-none focus:outline-none" />
+            <p className="mt-3 text-xs text-slate-500">Sélectionnez une image, puis faites glisser la poignée en bas à droite pour la redimensionner. Les flèches du clavier permettent un réglage précis.</p>
           </div>
         )}
 

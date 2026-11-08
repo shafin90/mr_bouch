@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { getPublishedPageContent } from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "Actualités & Blog — Touré Ahmed Bouah",
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ActualitesPage() {
+  const content = await getPublishedPageContent("news");
   let news: any[] = [];
   try {
     const supabase = await createClient();
@@ -25,25 +27,17 @@ export default async function ActualitesPage() {
     // fallback
   }
 
-  if (news.length === 0) {
-    news = [
-      { id: "1", title: "SOPHIA S.A. franchit une étape décisive pour le pôle d'affaires d'Akwaba City", excerpt: "Analyse des retombées économiques et des accords institutionnels garantissant la viabilisation de 12 000 hectares dans le Grand Abidjan.", category: "Investissements", slug: "akwaba-city-etape-decisive", image_url: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1000&q=80", date: "15 Mars 2026" },
-      { id: "2", title: "Tribune : Pourquoi la maîtrise des risques fonciers est le levier clé de l'Afrique", excerpt: "Touré Ahmed Bouah détaille dans une tribune exclusive comment sécuriser les capitaux privés face aux défis de l'urbanisation rapide.", category: "Tribune & Idées", slug: "maitrise-des-risques-fonciers", image_url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1000&q=80", date: "28 Février 2026" },
-      { id: "3", title: "Développement territorial : Nouveau protocole d'accord avec les communautés villageoises", excerpt: "Un modèle pionnier de cohésion sociale et de redistribution assurant une paix foncière pérenne pour les chantiers d'envergure.", category: "Actualités", slug: "protocole-accord-communautes", image_url: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1000&q=80", date: "20 Janvier 2026" },
-    ];
-  }
-
   return (
     <div style={{ background: "var(--paper)", minHeight: "100vh" }}>
       {/* Header — Navy */}
       <section style={{ background: "var(--navy)", color: "#fff", padding: "clamp(80px, 10vw, 120px) 0 clamp(60px, 8vw, 100px)" }}>
         <div className="container-x">
-          <p className="eyebrow">Publications &amp; Presse</p>
+          <p className="eyebrow">{content.eyebrow}</p>
           <h1 style={{ color: "#fff", lineHeight: 0.9, maxWidth: 640, marginBottom: 24 }}>
-            Actualités &amp;<br /><em>Blog Officiel</em>
+            {content.title}
           </h1>
           <p style={{ color: "rgba(203,211,216,0.85)", maxWidth: 520, fontSize: "17px", lineHeight: 1.75 }}>
-            Retrouvez les dernières annonces de <strong style={{ color: "#fff" }}>SOPHIA S.A.</strong>, les points d&apos;étape sur la Ville Nouvelle <strong style={{ color: "#fff" }}>Akwaba City</strong> et les réflexions personnelles de Touré Ahmed Bouah.
+            {content.intro}
           </p>
         </div>
       </section>
@@ -58,6 +52,7 @@ export default async function ActualitesPage() {
               borderTop: "1px solid var(--border)",
             }}
           >
+            {news.length === 0 && <p style={{ padding: 36 }}>{content.empty}</p>}
             {news.map((a: any) => (
               <article
                 key={a.id}
@@ -105,7 +100,7 @@ export default async function ActualitesPage() {
                       fontFamily: "ui-monospace, monospace",
                     }}
                   >
-                    {a.date || (a.created_at ? new Date(a.created_at).toLocaleDateString("fr-FR") : "")}
+                    {a.date || (a.created_at ? new Date(a.created_at).toLocaleDateString("en-GB") : "")}
                   </span>
                 </div>
 
@@ -138,7 +133,7 @@ export default async function ActualitesPage() {
                   className="text-link"
                   style={{ marginTop: "auto", fontSize: "10px" }}
                 >
-                  Lire l&apos;article ↗
+                  {content.readMore} ↗
                 </Link>
               </article>
             ))}

@@ -1,34 +1,14 @@
 import Link from "next/link";
 import { Reveal } from "@/components/ui/Reveal";
+import { getPublishedPageContent } from "@/lib/site-content";
 
-const roles = [
-  {
-    num: "01",
-    tag: "AMÉNAGEMENT FONCIER",
-    title: "Promoteur Immobilier & Bâtisseur",
-    desc: "Président-Directeur Général de SOPHIA S.A., Touré Ahmed Bouah pilote l'aménagement de grands ensembles fonciers et urbains en Côte d'Ivoire. Il transforme le foncier brut en territoires structurés, viabilisés et sécurisés avec titres ACD.",
-    href: "/entrepreneuriat",
-    linkText: "Explorer les projets",
-  },
-  {
-    num: "02",
-    tag: "ÉDITION & DOCTRINE",
-    title: "Auteur de 49 Ouvrages",
-    desc: "Auteur prolifique, il consacre ses écrits aux enjeux du développement économique, à la maîtrise des risques et à la structuration des villes africaines. Ses essais constituent une contribution intellectuelle majeure.",
-    href: "/biographie",
-    linkText: "Consulter ses écrits",
-  },
-  {
-    num: "03",
-    tag: "SOLIDARITÉ SOCIALE",
-    title: "Philanthrope & Action Communautaire",
-    desc: "À travers la Fondation Solidarité & Développement, il soutient l'éducation, la formation aux métiers techniques du bâtiment et l'amélioration du cadre de vie des communautés villageoises riveraines.",
-    href: "/engagements",
-    linkText: "Découvrir la fondation",
-  },
-];
-
-export function BackgroundSection() {
+export async function BackgroundSection() {
+  const content = await getPublishedPageContent("home");
+  const roles = [
+    { num: "01", tag: content.role1Tag, title: content.role1Title, desc: content.role1Desc, href: "/entrepreneuriat", linkText: content.role1Cta },
+    { num: "02", tag: content.role2Tag, title: content.role2Title, desc: content.role2Desc, href: "/biographie", linkText: content.role2Cta },
+    { num: "03", tag: content.role3Tag, title: content.role3Title, desc: content.role3Desc, href: "/engagements", linkText: content.role3Cta },
+  ];
   return (
     <section style={{ background: "var(--paper)", padding: "clamp(70px, 9vw, 110px) 0" }}>
       <div className="container-x">
@@ -36,13 +16,12 @@ export function BackgroundSection() {
         <div style={{ marginBottom: 52 }}>
           <Reveal>
             <p className="eyebrow-dark">
-              <span className="section-marker">01</span> Le Parcours &amp; La Vision
+              <span className="section-marker">01</span> {content.backgroundEyebrow.replace(/^01\s*/, "")}
             </p>
           </Reveal>
           <Reveal delay={0.1}>
             <h2 style={{ maxWidth: 640 }}>
-              Entreprendre avec une vision.<br />
-              Agir avec <em>conviction.</em>
+              <span style={{ whiteSpace: "pre-line" }}>{content.backgroundTitle}</span>
             </h2>
           </Reveal>
         </div>

@@ -1,64 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Eye } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-export function ViewTracker({ slug, initialViews }: { slug: string; initialViews?: number }) {
-  const [views, setViews] = useState<number>(initialViews || 0);
+let analyticsSessionId: string | null = null;
+
+function getOrCreateSessionId() {
+  analyticsSessionId ??= crypto.randomUUID();
+  return analyticsSessionId;
+}
+
+export function ViewTracker({ slug }: { slug: string; initialViews?: number }) {
+  const pendingExit = useRef<{ slug: string; timer: number } | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Track view once per session
-    const sessionKey = `viewed_news_${slug}`;
-    const alreadyViewed = sessionStorage.getItem(sessionKey);
-
-    if (!alreadyViewed) {
-      sessionStorage.setItem(sessionKey, "true");
-      fetch("/api/news/view", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (isMounted && data.success && data.views) {
-            setViews(data.views);
-          }
-        })
-        .catch(() => {});
-    } else {
-      // Just fetch current views
-      fetch("/api/news/view")
-        .then((r) => r.json())
-        .then((data) => {
-          if (isMounted && data.views && data.views[slug]) {
-            setViews(data.views[slug]);
-          }
-        })
-        .catch(() => {});
+    // React Strict Mode replays effects in development. Cancel only that same-page cleanup.
+    if (pendingExit.current?.slug === slug) {
+      window.clearTimeout(pendingExit.current.timer);
+      pendingExit.current = null;
     }
 
+    const startedAt = Date.now();
+    const viewId = crypto.randomUUID();
+    const sessionId = getOrCreateSessionId();
+    const referrer = document.referrer;
+    let activeSince: number | null = document.visibilityState === "visible" ? startedAt : null;
+    let activeMilliseconds = 0;
+    let sent = false;
+
+    function updateVisibility() {
+      if (document.visibilityState === "hidden") {
+        if (activeSince !== null) activeMilliseconds += Date.now() - activeSince;
+        activeSince = null;
+      } else if (activeSince === null) {
+        activeSince = Date.now();
+      }
+    }
+
+    function recordView() {
+      if (sent) return;
+      sent = true;
+      const visibleTime = activeMilliseconds + (activeSince === null ? 0 : Date.now() - activeSince);
+      const payload = JSON.stringify({
+        slug,
+        viewId,
+        sessionId,
+        referrer,
+        engagedSeconds: Math.min(86400, Math.floor(visibleTime / 1000)),
+      });
+
+      const beaconSent = navigator.sendBeacon(
+        "/api/news/view",
+        new Blob([payload], { type: "application/json" })
+      );
+      if (!beaconSent) {
+        void fetch("/api/news/view", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    }
+
+    function onPageHide() {
+      recordView();
+    }
+
+    document.addEventListener("visibilitychange", updateVisibility);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
-      isMounted = false;
+      document.removeEventListener("visibilitychange", updateVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+      const timer = window.setTimeout(recordView, 200);
+      pendingExit.current = { slug, timer };
     };
   }, [slug]);
 
-  if (views === 0) return null;
-
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        color: "var(--muted)",
-        fontSize: "11px",
-        fontWeight: 600,
-      }}
-    >
-      <Eye style={{ width: 13, height: 13, color: "var(--gold)" }} />
-      <span>{views.toLocaleString()} lectures</span>
-    </span>
-  );
+  // Analytics are displayed in the authenticated admin dashboard, not as public counters.
+  return null;
 }
